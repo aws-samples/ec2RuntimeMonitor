@@ -1,0 +1,313 @@
+{
+    "Comment": "A description of my state machine",
+    "StartAt": "Pass",
+    "States": {
+      "Pass": {
+        "Type": "Pass",
+        "Next": "DescribeTags",
+        "Parameters": {
+          "Parameters": {
+            "Monitor": {
+              "Regex": "^(True)|(true)|(False)|(false)$",
+              "Default": "${Monitor}"
+            },
+            "MonitorGroup": {
+              "Regex": "^[a-z0-9]+$",
+              "Default": "${MonitorGroup}"
+            },
+            "Threshold": {
+              "Regex": "^[0-9]+$",
+              "Default": "${Threshold}"
+            },
+            "MonitorStepFunctionArn": {
+              "Regex": "^arn:aws:states:.*$",
+              "Default": "${MonitorStepFunctionArn}"
+            },
+            "MonitorStepFunctionRoleArn": {
+              "Regex": "^arn:aws:iam:.*$",
+              "Default": "${MonitorStepFunctionRoleArn}"
+            },
+            "SchedulerGroupName": {
+              "Regex": "^.*$",
+              "Default": "${ProjectName}"
+            },
+            "SnsTopicArn": {
+              "Regex": "^arn:aws:sns:.*$",
+              "Default": "${SnsTopicArn}"
+            },
+            "DynamoTableName": {
+                "Regex": "^.*$",
+                "Default": "${ProjectName}"
+            },
+            "LambdaFunctionArn": {
+                "Regex": "^arn:aws:lambda:.*$",
+                "Default": "${LambdaFunctionArn}"
+            }
+          },
+          "InstanceId.$": "$.detail.instance-id",
+          "State.$": "$.detail.state"
+        }
+      },
+      "DescribeTags": {
+        "Type": "Task",
+        "Next": "Lambda Invoke",
+        "Parameters": {
+          "Filters": [
+            {
+              "Name": "resource-id",
+              "Values.$": "States.Array($.InstanceId)"
+            },
+            {
+              "Name": "resource-type",
+              "Values": [
+                "instance"
+              ]
+            }
+          ]
+        },
+        "Resource": "arn:aws:states:::aws-sdk:ec2:describeTags",
+        "ResultPath": "$.DescribeTags",
+        "Retry": [
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "BackoffRate": 2,
+            "IntervalSeconds": 1,
+            "MaxAttempts": 3,
+            "Comment": "all"
+          }
+        ],
+        "Catch": [
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "Comment": "all",
+            "Next": "Fail"
+          }
+        ]
+      },
+      "Lambda Invoke": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "Parameters": {
+          "FunctionName.$": "$.Parameters.LambdaFunctionArn.Default",
+          "Payload": {
+            "Tags.$": "$.DescribeTags.Tags",
+            "Parameters.$": "$.Parameters"
+          }
+        },
+        "Retry": [
+          {
+            "ErrorEquals": [
+              "SyntaxError"
+            ],
+            "IntervalSeconds": 0,
+            "MaxAttempts": 0,
+            "BackoffRate": 1
+          },
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "BackoffRate": 2,
+            "IntervalSeconds": 1,
+            "MaxAttempts": 3
+          }
+        ],
+        "Next": "Choice",
+        "ResultPath": "$.LambdaResult",
+        "ResultSelector": {
+          "FinalParameters.$": "$.Payload"
+        },
+        "Catch": [
+          {
+            "ErrorEquals": [
+              "SyntaxError"
+            ],
+            "Next": "Fail",
+            "Comment": "WrongParameter"
+          }
+        ]
+      },
+      "Choice": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.LambdaResult.FinalParameters.Monitor",
+            "BooleanEquals": false,
+            "Next": "Success"
+          },
+          {
+            "Variable": "$.State",
+            "StringMatches": "running",
+            "Next": "DynamoDB PutItem"
+          },
+          {
+            "Variable": "$.State",
+            "StringMatches": "terminated",
+            "Next": "DeleteSchedule"
+          }
+        ],
+        "Default": "Fail"
+      },
+      "DeleteSchedule": {
+        "Type": "Task",
+        "Next": "DynamoDB DeleteItem",
+        "Parameters": {
+          "Name.$": "$.InstanceId",
+          "GroupName.$": "$.LambdaResult.FinalParameters.SchedulerGroupName"
+        },
+        "Resource": "arn:aws:states:::aws-sdk:scheduler:deleteSchedule",
+        "Catch": [
+          {
+            "ErrorEquals": [
+              "Scheduler.ResourceNotFoundException"
+            ],
+            "Comment": "Scheduler does not exist ( Already deleted )",
+            "Next": "DynamoDB DeleteItem",
+            "ResultPath": "$.DeleteSchedule"
+          }
+        ],
+        "Retry": [
+          {
+            "ErrorEquals": [
+              "Scheduler.ResourceNotFoundException"
+            ],
+            "IntervalSeconds": 0,
+            "MaxAttempts": 0,
+            "BackoffRate": 1,
+            "Comment": "No retry if the scheduler does not exist"
+          },
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "BackoffRate": 2,
+            "IntervalSeconds": 1,
+            "MaxAttempts": 3,
+            "Comment": "all"
+          }
+        ],
+        "ResultPath": "$.DeleteSchedule"
+      },
+      "DynamoDB PutItem": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::dynamodb:putItem",
+        "Parameters": {
+          "TableName.$": "$.LambdaResult.FinalParameters.DynamoTableName",
+          "Item": {
+            "InstanceId": {
+              "S.$": "$.InstanceId"
+            }
+          },
+          "ConditionExpression": "attribute_not_exists(InstanceId)",
+          "ReturnValues": "ALL_OLD",
+          "ReturnValuesOnConditionCheckFailure": "ALL_OLD"
+        },
+        "Next": "CreateSchedule",
+        "ResultPath": "$.DynamoPutItem",
+        "Catch": [
+          {
+            "ErrorEquals": [
+              "DynamoDB.ConditionalCheckFailedException"
+            ],
+            "Next": "Success",
+            "ResultPath": "$.dynamo-put-item",
+            "Comment": "Idempotency"
+          },
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "Comment": "All",
+            "ResultPath": "$.dynamo-put-item",
+            "Next": "Fail"
+          }
+        ],
+        "Retry": [
+          {
+            "ErrorEquals": [
+              "DynamoDB.ConditionalCheckFailedException"
+            ],
+            "IntervalSeconds": 0,
+            "Comment": "Idempotency",
+            "MaxAttempts": 0,
+            "BackoffRate": 1
+          },
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "BackoffRate": 2,
+            "IntervalSeconds": 1,
+            "MaxAttempts": 3,
+            "Comment": "Retry"
+          }
+        ]
+      },
+      "CreateSchedule": {
+        "Type": "Task",
+        "Next": "Success",
+        "Parameters": {
+          "FlexibleTimeWindow": {
+            "Mode": "OFF"
+          },
+          "Name.$": "$.InstanceId",
+          "ScheduleExpression": "rate(1 hour)",
+          "GroupName.$": "$.LambdaResult.FinalParameters.SchedulerGroupName",
+          "Target": {
+            "Arn.$": "$.LambdaResult.FinalParameters.MonitorStepFunctionArn",
+            "RoleArn.$": "$.LambdaResult.FinalParameters.MonitorStepFunctionRoleArn",
+            "Input": {
+              "InstanceId.$": "$.InstanceId",
+              "Threshold.$": "$.LambdaResult.FinalParameters.Threshold",
+              "Topic.$": "$.LambdaResult.FinalParameters.SnsTopicArn",
+              "TopicTarget.$": "$.LambdaResult.FinalParameters.MonitorGroup"
+            }
+          }
+        },
+        "Resource": "arn:aws:states:::aws-sdk:scheduler:createSchedule"
+      },
+      "Fail": {
+        "Type": "Fail"
+      },
+      "Success": {
+        "Type": "Succeed"
+      },
+      "DynamoDB DeleteItem": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::dynamodb:deleteItem",
+        "Parameters": {
+          "TableName.$": "$.LambdaResult.FinalParameters.DynamoTableName",
+          "Key": {
+            "InstanceId": {
+              "S.$": "$.InstanceId"
+            }
+          }
+        },
+        "Retry": [
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "BackoffRate": 2,
+            "IntervalSeconds": 1,
+            "MaxAttempts": 3,
+            "Comment": "retry"
+          }
+        ],
+        "Catch": [
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "Comment": "all",
+            "Next": "Fail"
+          }
+        ],
+        "Next": "Success"
+      }
+    }
+  }

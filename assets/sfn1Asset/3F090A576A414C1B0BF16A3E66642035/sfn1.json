@@ -1,0 +1,180 @@
+{
+    "Comment": "This is a state machine template",
+    "StartAt": "InputIsValid?",
+    "States": {
+      "InputIsValid?": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "And": [
+              {
+                "Variable": "$.Threshold",
+                "IsNumeric": true
+              },
+              {
+                "Variable": "$.InstanceId",
+                "IsString": true
+              },
+              {
+                "Variable": "$.Topic",
+                "IsString": true
+              },
+              {
+                "Variable": "$.TopicTarget",
+                "IsString": true
+              }
+            ],
+            "Next": "DescribeInstances"
+          }
+        ],
+        "Default": "Fail"
+      },
+      "DescribeInstances": {
+        "Type": "Task",
+        "Parameters": {
+          "Filters": [
+            {
+              "Name": "instance-id",
+              "Values.$": "States.Array($.InstanceId)"
+            }
+          ]
+        },
+        "Resource": "arn:aws:states:::aws-sdk:ec2:describeInstances",
+        "ResultSelector": {
+          "LaunchTime.$": "$.Reservations[0].Instances[0].LaunchTime",
+          "State.$": "$.Reservations[0].Instances[0].State.Name",
+          "InstanceType.$": "$.Reservations[0].Instances[0].InstanceType",
+          "AzId.$": "$.Reservations[0].Instances[0].Placement.AvailabilityZone",
+          "AccountId.$": "$.Reservations[0].OwnerId"
+        },
+        "ResultPath": "$.DescribeInstance",
+        "Next": "InstanceRunning?",
+        "Catch": [
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "Next": "Fail"
+          }
+        ],
+        "Retry": [
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "BackoffRate": 2,
+            "IntervalSeconds": 1,
+            "MaxAttempts": 3,
+            "Comment": "retry"
+          }
+        ]
+      },
+      "InstanceRunning?": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "And": [
+              {
+                "Variable": "$.DescribeInstance.State",
+                "StringEquals": "running"
+              },
+              {
+                "Variable": "$.DescribeInstance.LaunchTime",
+                "IsPresent": true
+              }
+            ],
+            "Next": "ComputeUptime"
+          }
+        ],
+        "Default": "Success"
+      },
+      "ComputeUptime": {
+        "Type": "Task",
+        "ResultPath": "$.Alarm",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "ResultSelector": {
+          "UpTime.$": "$.Payload.UpTime",
+          "Status.$": "$.Payload.Alarm"
+        },
+        "Parameters": {
+          "Payload": {
+            "CurrentTime.$": "$$.Execution.StartTime",
+            "LaunchTime.$": "$.DescribeInstance.LaunchTime",
+            "Threshold.$": "$.Threshold"
+          },
+          "FunctionName": "${compareTimeArn}"
+        },
+        "Next": "TriggerAlarm?",
+        "Catch": [
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "Next": "Fail"
+          }
+        ],
+        "Retry": [
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "BackoffRate": 2,
+            "IntervalSeconds": 1,
+            "MaxAttempts": 3,
+            "Comment": "retry"
+          }
+        ]
+      },
+      "TriggerAlarm?": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.Alarm.Status",
+            "BooleanEquals": true,
+            "Next": "SendAlarm"
+          }
+        ],
+        "Default": "Success"
+      },
+      "SendAlarm": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::sns:publish",
+        "Parameters": {
+          "TopicArn.$": "$.Topic",
+          "Message.$": "States.Format('WARNING : The EC2 instance {} is running for more than {} hours in {}. Current up-time is {}. This {} instance belongs to AWS account {}.', $.InstanceId , $.Threshold , $.DescribeInstance.AzId , $.Alarm.UpTime , $.DescribeInstance.InstanceType , $.DescribeInstance.AccountId )",
+          "MessageAttributes": {
+            "Target": {
+              "DataType": "String",
+              "StringValue.$": "$.TopicTarget"
+            }
+          }
+        },
+        "Next": "Success",
+        "Catch": [
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "Next": "Fail"
+          }
+        ],
+        "Retry": [
+          {
+            "ErrorEquals": [
+              "States.ALL"
+            ],
+            "BackoffRate": 2,
+            "IntervalSeconds": 1,
+            "MaxAttempts": 3,
+            "Comment": "retry"
+          }
+        ]
+      },
+      "Fail": {
+        "Type": "Fail"
+      },
+      "Success": {
+        "Type": "Succeed"
+      }
+    }
+}

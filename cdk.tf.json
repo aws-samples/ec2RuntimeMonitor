@@ -1,0 +1,909 @@
+{
+  "//": {
+    "metadata": {
+      "backend": "local",
+      "stackName": "id",
+      "version": "0.21.0-pre.21"
+    },
+    "outputs": {
+    }
+  },
+  "data": {
+    "archive_file": {
+      "compareTimeArchive": {
+        "//": {
+          "metadata": {
+            "path": "id/compareTimeArchive",
+            "uniqueId": "compareTimeArchive"
+          }
+        },
+        "output_file_mode": "0777",
+        "output_path": "assets/compareTimeAsset/B983B0B8C5A2FDA5666ABCFD76DC4453/lambda.zip",
+        "source_file": "assets/compareTimeAsset/B983B0B8C5A2FDA5666ABCFD76DC4453/index.mjs",
+        "type": "zip"
+      },
+      "initArchive": {
+        "//": {
+          "metadata": {
+            "path": "id/initArchive",
+            "uniqueId": "initArchive"
+          }
+        },
+        "output_file_mode": "0777",
+        "output_path": "assets/initAsset/874B94F3D99032F4F0F8ABCAFB6268BF/lambda.zip",
+        "source_file": "assets/initAsset/874B94F3D99032F4F0F8ABCAFB6268BF/index.mjs",
+        "type": "zip"
+      }
+    },
+    "aws_availability_zones": {
+      "az": {
+        "//": {
+          "metadata": {
+            "path": "id/az",
+            "uniqueId": "az"
+          }
+        }
+      }
+    },
+    "aws_caller_identity": {
+      "callerIdentity": {
+        "//": {
+          "metadata": {
+            "path": "id/callerIdentity",
+            "uniqueId": "callerIdentity"
+          }
+        }
+      }
+    },
+    "aws_iam_policy": {
+      "lambdaVpcPolicy": {
+        "//": {
+          "metadata": {
+            "path": "id/lambdaVpcPolicy",
+            "uniqueId": "lambdaVpcPolicy"
+          }
+        },
+        "arn": "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+      },
+      "lambdaXrayPolicy": {
+        "//": {
+          "metadata": {
+            "path": "id/lambdaXrayPolicy",
+            "uniqueId": "lambdaXrayPolicy"
+          }
+        },
+        "arn": "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+      }
+    },
+    "aws_iam_session_context": {
+      "iamSessionContext": {
+        "//": {
+          "metadata": {
+            "path": "id/iamSessionContext",
+            "uniqueId": "iamSessionContext"
+          }
+        },
+        "arn": "${data.aws_caller_identity.callerIdentity.arn}"
+      }
+    },
+    "aws_region": {
+      "currentRegion": {
+        "//": {
+          "metadata": {
+            "path": "id/currentRegion",
+            "uniqueId": "currentRegion"
+          }
+        }
+      }
+    }
+  },
+  "resource": {
+    "aws_cloudwatch_event_rule": {
+      "eventRule": {
+        "//": {
+          "metadata": {
+            "path": "id/eventRule",
+            "uniqueId": "eventRule"
+          }
+        },
+        "event_bus_name": "default",
+        "event_pattern": "{\n  \"source\" : [\n    \"aws.ec2\"\n  ],\n  \"detail-type\" : [\n    \"EC2 Instance State-change Notification\"\n  ],\n  \"detail\" : {\n    \"state\" : [\n      \"running\",\n      \"terminated\"\n    ]\n  }\n}",
+        "name": "${var.ProjectName}"
+      }
+    },
+    "aws_cloudwatch_event_target": {
+      "eventTarget": {
+        "//": {
+          "metadata": {
+            "path": "id/eventTarget",
+            "uniqueId": "eventTarget"
+          }
+        },
+        "arn": "${aws_sfn_state_machine.sfn2.state_machine_version_arn}",
+        "lifecycle": {
+          "replace_triggered_by": [
+            "aws_sfn_state_machine.sfn2"
+          ]
+        },
+        "role_arn": "${aws_iam_role.eventTargetRole.arn}",
+        "rule": "${aws_cloudwatch_event_rule.eventRule.name}"
+      }
+    },
+    "aws_cloudwatch_log_group": {
+      "logGroupCompareTime": {
+        "//": {
+          "metadata": {
+            "path": "id/logGroupCompareTime",
+            "uniqueId": "logGroupCompareTime"
+          }
+        },
+        "kms_key_id": "${aws_kms_alias.cmkAlias.arn}",
+        "log_group_class": "INFREQUENT_ACCESS",
+        "name": "/aws/lambda/compareTime",
+        "retention_in_days": 365
+      },
+      "logGroupFlows": {
+        "//": {
+          "metadata": {
+            "path": "id/logGroupFlows",
+            "uniqueId": "logGroupFlows"
+          }
+        },
+        "kms_key_id": "${aws_kms_alias.cmkAlias.arn}",
+        "log_group_class": "INFREQUENT_ACCESS",
+        "name": "/aws/vpc/flows",
+        "retention_in_days": 365
+      },
+      "logGroupInit": {
+        "//": {
+          "metadata": {
+            "path": "id/logGroupInit",
+            "uniqueId": "logGroupInit"
+          }
+        },
+        "kms_key_id": "${aws_kms_alias.cmkAlias.arn}",
+        "log_group_class": "INFREQUENT_ACCESS",
+        "name": "/aws/lambda/init",
+        "retention_in_days": 365
+      },
+      "logGroupSfn1": {
+        "//": {
+          "metadata": {
+            "path": "id/logGroupSfn1",
+            "uniqueId": "logGroupSfn1"
+          }
+        },
+        "kms_key_id": "${aws_kms_alias.cmkAlias.arn}",
+        "log_group_class": "INFREQUENT_ACCESS",
+        "name": "/aws/sfn/sfn1",
+        "retention_in_days": 365
+      },
+      "logGroupSfn2": {
+        "//": {
+          "metadata": {
+            "path": "id/logGroupSfn2",
+            "uniqueId": "logGroupSfn2"
+          }
+        },
+        "kms_key_id": "${aws_kms_alias.cmkAlias.arn}",
+        "log_group_class": "INFREQUENT_ACCESS",
+        "name": "/aws/sfn/sfn2",
+        "retention_in_days": 365
+      }
+    },
+    "aws_default_security_group": {
+      "defaultSecurityGroup": {
+        "//": {
+          "metadata": {
+            "path": "id/defaultSecurityGroup",
+            "uniqueId": "defaultSecurityGroup"
+          }
+        },
+        "vpc_id": "${aws_vpc.lambdaVpc.id}"
+      }
+    },
+    "aws_dynamodb_table": {
+      "dynamoDbTable": {
+        "//": {
+          "metadata": {
+            "path": "id/dynamoDbTable",
+            "uniqueId": "dynamoDbTable"
+          }
+        },
+        "attribute": [
+          {
+            "name": "InstanceId",
+            "type": "S"
+          }
+        ],
+        "billing_mode": "PAY_PER_REQUEST",
+        "hash_key": "InstanceId",
+        "name": "${var.ProjectName}",
+        "point_in_time_recovery": {
+          "enabled": true
+        },
+        "server_side_encryption": {
+          "enabled": true,
+          "kms_key_arn": "${aws_kms_alias.cmkAlias.arn}"
+        }
+      }
+    },
+    "aws_flow_log": {
+      "flowLogs": {
+        "//": {
+          "metadata": {
+            "path": "id/flowLogs",
+            "uniqueId": "flowLogs"
+          }
+        },
+        "iam_role_arn": "${aws_iam_role.flowsRole.arn}",
+        "log_destination": "${aws_cloudwatch_log_group.logGroupFlows.arn}",
+        "traffic_type": "ALL",
+        "vpc_id": "${aws_vpc.lambdaVpc.id}"
+      }
+    },
+    "aws_iam_policy": {
+      "compareTimePolicy": {
+        "//": {
+          "metadata": {
+            "path": "id/compareTimePolicy",
+            "uniqueId": "compareTimePolicy"
+          }
+        },
+        "description": "IAM policy assigned to compareTime Lambda role",
+        "name": "compareTime",
+        "path": "/${var.ProjectName}/",
+        "policy": "{\n  \"Version\" : \"2012-10-17\",\n  \"Statement\" : [\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : \"logs:CreateLogGroup\",\n      \"Resource\" : \"arn:aws:logs:${data.aws_region.currentRegion.name}:${data.aws_caller_identity.callerIdentity.account_id}:*\"\n    },\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : [\n        \"logs:CreateLogStream\",\n        \"logs:PutLogEvents\"\n      ],\n      \"Resource\" : [\n        \"arn:aws:logs:${data.aws_region.currentRegion.name}:${data.aws_caller_identity.callerIdentity.account_id}:log-group:/aws/lambda/compareTime:*\"\n      ]\n    },\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : [\n        \"sns:Publish\"\n      ],\n      \"Resource\" : [\n        \"${aws_sns_topic.snsDlqTopic.arn}\"\n      ]\n    }\n  ]\n}"
+      },
+      "eventTargetPolicy": {
+        "//": {
+          "metadata": {
+            "path": "id/eventTargetPolicy",
+            "uniqueId": "eventTargetPolicy"
+          }
+        },
+        "description": "IAM policy assigned to compareTime Lambda role",
+        "lifecycle": {
+          "replace_triggered_by": [
+            "aws_sfn_state_machine.sfn2"
+          ]
+        },
+        "name": "eventTarget",
+        "path": "/${var.ProjectName}/",
+        "policy": "{\n  \"Version\" : \"2012-10-17\",\n  \"Statement\" : [\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : [\n        \"states:StartExecution\"\n      ],\n      \"Resource\" : [\n        \"${aws_sfn_state_machine.sfn2.arn}\"\n      ],\n      \"Condition\" : {\n        \"ForAnyValue:StringEquals\" : {\n          \"states:StateMachineQualifier\" : [\n            \"${trim(trimprefix(aws_sfn_state_machine.sfn2.state_machine_version_arn, aws_sfn_state_machine.sfn2.arn), \":\")}\"\n          ]\n        }\n      }\n    }\n  ]\n}"
+      },
+      "flowsPolicy": {
+        "//": {
+          "metadata": {
+            "path": "id/flowsPolicy",
+            "uniqueId": "flowsPolicy"
+          }
+        },
+        "description": "IAM policy assigned to VPC Flows role",
+        "name": "flows",
+        "path": "/${var.ProjectName}/",
+        "policy": "{\n  \"Version\" : \"2012-10-17\",\n  \"Statement\" : [\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : \"logs:CreateLogGroup\",\n      \"Resource\" : \"arn:aws:logs:${data.aws_region.currentRegion.name}:${data.aws_caller_identity.callerIdentity.account_id}:*\"\n    },\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : [\n        \"logs:CreateLogGroup\",\n        \"logs:CreateLogStream\",\n        \"logs:PutLogEvents\",\n        \"logs:DescribeLogGroups\",\n        \"logs:DescribeLogStreams\"\n      ],\n      \"Resource\" : [\n        \"*\"\n      ]\n    }\n  ]\n}"
+      },
+      "initPolicy": {
+        "//": {
+          "metadata": {
+            "path": "id/initPolicy",
+            "uniqueId": "initPolicy"
+          }
+        },
+        "description": "IAM policy assigned to Init Lambda role",
+        "name": "init",
+        "path": "/${var.ProjectName}/",
+        "policy": "{\n  \"Version\" : \"2012-10-17\",\n  \"Statement\" : [\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : \"logs:CreateLogGroup\",\n      \"Resource\" : \"arn:aws:logs:${data.aws_region.currentRegion.name}:${data.aws_caller_identity.callerIdentity.account_id}:*\"\n    },\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : [\n        \"logs:CreateLogStream\",\n        \"logs:PutLogEvents\"\n      ],\n      \"Resource\" : [\n        \"arn:aws:logs:${data.aws_region.currentRegion.name}:${data.aws_caller_identity.callerIdentity.account_id}:log-group:/aws/lambda/init:*\"\n      ]\n    },\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : [\n        \"sns:Publish\"\n      ],\n      \"Resource\" : [\n        \"${aws_sns_topic.snsDlqTopic.arn}\"\n      ]\n    }\n  ]\n}"
+      },
+      "schedulerPolicy": {
+        "//": {
+          "metadata": {
+            "path": "id/schedulerPolicy",
+            "uniqueId": "schedulerPolicy"
+          }
+        },
+        "description": "IAM policy assigned to compareTime Lambda role",
+        "lifecycle": {
+          "replace_triggered_by": [
+            "aws_sfn_state_machine.sfn1"
+          ]
+        },
+        "name": "scheduler",
+        "path": "/${var.ProjectName}/",
+        "policy": "{\n  \"Version\" : \"2012-10-17\",\n  \"Statement\" : [\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : [\n        \"states:StartExecution\"\n      ],\n      \"Resource\" : [\n        \"${aws_sfn_state_machine.sfn1.arn}\"\n      ],\n      \"Condition\" : {\n        \"ForAnyValue:StringEquals\" : {\n          \"states:StateMachineQualifier\" : [\n            \"${trim(trimprefix(aws_sfn_state_machine.sfn1.state_machine_version_arn, aws_sfn_state_machine.sfn1.arn), \":\")}\"\n          ]\n        }\n      }\n    }\n  ]\n}"
+      },
+      "sfn1Policy": {
+        "//": {
+          "metadata": {
+            "path": "id/sfn1Policy",
+            "uniqueId": "sfn1Policy"
+          }
+        },
+        "description": "IAM policy assigned to compareTime Lambda role",
+        "name": "sfn1",
+        "path": "/${var.ProjectName}/",
+        "policy": "{\n  \"Version\" : \"2012-10-17\",\n  \"Statement\" : [\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : \"ec2:DescribeInstances\",\n      \"Resource\" : [\n        \"*\"\n      ]\n    },\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : [\n        \"lambda:InvokeFunction\"\n      ],\n      \"Resource\" : [\n        \"${aws_lambda_function.compareTime.qualified_arn}\"\n      ]\n    },\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : [\n        \"sns:Publish\"\n      ],\n      \"Resource\" : [\n        \"${aws_sns_topic.snsTopic.arn}\"\n      ]\n    },\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : [\n        \"logs:CreateLogDelivery\",\n        \"logs:CreateLogStream\",\n        \"logs:GetLogDelivery\",\n        \"logs:UpdateLogDelivery\",\n        \"logs:DeleteLogDelivery\",\n        \"logs:ListLogDeliveries\",\n        \"logs:PutLogEvents\",\n        \"logs:PutResourcePolicy\",\n        \"logs:DescribeResourcePolicies\",\n        \"logs:DescribeLogGroups\"\n      ],\n      \"Resource\" : \"*\"\n    }\n  ]\n}"
+      },
+      "sfn2Policy": {
+        "//": {
+          "metadata": {
+            "path": "id/sfn2Policy",
+            "uniqueId": "sfn2Policy"
+          }
+        },
+        "description": "IAM policy assigned to compareTime Lambda role",
+        "name": "sfn2",
+        "path": "/${var.ProjectName}/",
+        "policy": "{\n  \"Version\" : \"2012-10-17\",\n  \"Statement\" : [\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : [\n        \"scheduler:CreateSchedule\",\n        \"scheduler:DeleteSchedule\"\n      ],\n      \"Resource\" : [\n        \"arn:aws:scheduler:${data.aws_region.currentRegion.name}:${data.aws_caller_identity.callerIdentity.account_id}:schedule/${var.ProjectName}/*\"\n      ]\n    },\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : \"iam:PassRole\",\n      \"Resource\" : [\n        \"${aws_iam_role.schedulerRole.arn}\"\n      ],\n      \"Condition\" : {\n        \"StringLike\" : {\n          \"iam:PassedToService\" : \"scheduler.amazonaws.com\"\n        }\n      }\n    },\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : [\n        \"lambda:InvokeFunction\"\n      ],\n      \"Resource\" : [\n        \"${aws_lambda_function.init.qualified_arn}\"\n      ]\n    },\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : [\n        \"dynamodb:GetItem\",\n        \"dynamodb:PutItem\",\n        \"dynamodb:UpdateItem\",\n        \"dynamodb:DeleteItem\"\n      ],\n      \"Resource\" : [\n        \"${aws_dynamodb_table.dynamoDbTable.arn}\"\n      ]\n    },\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : [\n        \"ec2:DescribeTags\"\n      ],\n      \"Resource\" : [\n        \"*\"\n      ]\n    },\n    {\n      \"Effect\" : \"Allow\",\n      \"Action\" : [\n        \"logs:CreateLogDelivery\",\n        \"logs:CreateLogStream\",\n        \"logs:GetLogDelivery\",\n        \"logs:UpdateLogDelivery\",\n        \"logs:DeleteLogDelivery\",\n        \"logs:ListLogDeliveries\",\n        \"logs:PutLogEvents\",\n        \"logs:PutResourcePolicy\",\n        \"logs:DescribeResourcePolicies\",\n        \"logs:DescribeLogGroups\"\n      ],\n      \"Resource\" : \"*\"\n    }\n  ]\n}"
+      }
+    },
+    "aws_iam_role": {
+      "compareTimeRole": {
+        "//": {
+          "metadata": {
+            "path": "id/compareTimeRole",
+            "uniqueId": "compareTimeRole"
+          }
+        },
+        "assume_role_policy": "{\n  \"Version\" : \"2012-10-17\",\n  \"Statement\" : [\n    {\n      \"Effect\" : \"Allow\",\n      \"Principal\" : {\n        \"Service\" : \"lambda.amazonaws.com\"\n      },\n      \"Action\" : \"sts:AssumeRole\",\n      \"Condition\" : {\n        \"StringEquals\" : {\n          \"aws:SourceAccount\" : \"${data.aws_caller_identity.callerIdentity.account_id}\"\n        }\n      }\n    }\n  ]\n}",
+        "description": "IAM role assumed by compareTime Lambda",
+        "name": "compareTime",
+        "path": "/${var.ProjectName}/"
+      },
+      "eventTargetRole": {
+        "//": {
+          "metadata": {
+            "path": "id/eventTargetRole",
+            "uniqueId": "eventTargetRole"
+          }
+        },
+        "assume_role_policy": "{\n  \"Version\" : \"2012-10-17\",\n  \"Statement\" : [\n    {\n      \"Effect\" : \"Allow\",\n      \"Principal\" : {\n        \"Service\" : \"events.amazonaws.com\"\n      },\n      \"Action\" : \"sts:AssumeRole\",\n      \"Condition\" : {\n        \"StringEquals\" : {\n          \"aws:SourceAccount\" : \"${data.aws_caller_identity.callerIdentity.account_id}\"\n        }\n      }\n    }\n  ]\n}",
+        "description": "IAM role assumed by compareTime Lambda",
+        "name": "eventTarget",
+        "path": "/${var.ProjectName}/"
+      },
+      "flowsRole": {
+        "//": {
+          "metadata": {
+            "path": "id/flowsRole",
+            "uniqueId": "flowsRole"
+          }
+        },
+        "assume_role_policy": "{\n  \"Version\" : \"2012-10-17\",\n  \"Statement\" : [\n    {\n      \"Effect\" : \"Allow\",\n      \"Principal\" : {\n        \"Service\" : \"vpc-flow-logs.amazonaws.com\"\n      },\n      \"Action\" : \"sts:AssumeRole\",\n      \"Condition\" : {\n        \"StringEquals\" : {\n          \"aws:SourceAccount\" : \"${data.aws_caller_identity.callerIdentity.account_id}\"\n        }\n      }\n    }\n  ]\n}",
+        "description": "IAM role assumed by VPC Flows",
+        "name": "flows",
+        "path": "/${var.ProjectName}/"
+      },
+      "initRole": {
+        "//": {
+          "metadata": {
+            "path": "id/initRole",
+            "uniqueId": "initRole"
+          }
+        },
+        "assume_role_policy": "{\n  \"Version\" : \"2012-10-17\",\n  \"Statement\" : [\n    {\n      \"Effect\" : \"Allow\",\n      \"Principal\" : {\n        \"Service\" : \"lambda.amazonaws.com\"\n      },\n      \"Action\" : \"sts:AssumeRole\",\n      \"Condition\" : {\n        \"StringEquals\" : {\n          \"aws:SourceAccount\" : \"${data.aws_caller_identity.callerIdentity.account_id}\"\n        }\n      }\n    }\n  ]\n}",
+        "description": "IAM role assumed by Init Lambda",
+        "name": "init",
+        "path": "/${var.ProjectName}/"
+      },
+      "schedulerRole": {
+        "//": {
+          "metadata": {
+            "path": "id/schedulerRole",
+            "uniqueId": "schedulerRole"
+          }
+        },
+        "assume_role_policy": "{\n  \"Version\" : \"2012-10-17\",\n  \"Statement\" : [\n    {\n      \"Effect\" : \"Allow\",\n      \"Principal\" : {\n        \"Service\" : \"scheduler.amazonaws.com\"\n      },\n      \"Action\" : \"sts:AssumeRole\",\n      \"Condition\" : {\n        \"StringEquals\" : {\n          \"aws:SourceAccount\" : \"${data.aws_caller_identity.callerIdentity.account_id}\"\n        }\n      }\n    }\n  ]\n}",
+        "description": "IAM role assumed by compareTime Lambda",
+        "name": "scheduler",
+        "path": "/${var.ProjectName}/"
+      },
+      "sfn1Role": {
+        "//": {
+          "metadata": {
+            "path": "id/sfn1Role",
+            "uniqueId": "sfn1Role"
+          }
+        },
+        "assume_role_policy": "{\n  \"Version\" : \"2012-10-17\",\n  \"Statement\" : [\n    {\n      \"Effect\" : \"Allow\",\n      \"Principal\" : {\n        \"Service\" : \"states.amazonaws.com\"\n      },\n      \"Action\" : \"sts:AssumeRole\",\n      \"Condition\" : {\n        \"StringEquals\" : {\n          \"aws:SourceAccount\" : \"${data.aws_caller_identity.callerIdentity.account_id}\"\n        }\n      }\n    }\n  ]\n}",
+        "description": "IAM role assumed by compareTime Lambda",
+        "name": "sfn1",
+        "path": "/${var.ProjectName}/"
+      },
+      "sfn2Role": {
+        "//": {
+          "metadata": {
+            "path": "id/sfn2Role",
+            "uniqueId": "sfn2Role"
+          }
+        },
+        "assume_role_policy": "{\n  \"Version\" : \"2012-10-17\",\n  \"Statement\" : [\n    {\n      \"Effect\" : \"Allow\",\n      \"Principal\" : {\n        \"Service\" : \"states.amazonaws.com\"\n      },\n      \"Action\" : \"sts:AssumeRole\",\n      \"Condition\" : {\n        \"StringEquals\" : {\n          \"aws:SourceAccount\" : \"${data.aws_caller_identity.callerIdentity.account_id}\"\n        }\n      }\n    }\n  ]\n}",
+        "description": "IAM role assumed by compareTime Lambda",
+        "name": "sfn2",
+        "path": "/${var.ProjectName}/"
+      }
+    },
+    "aws_iam_role_policy_attachment": {
+      "compareTimeRolePolicyAttachment": {
+        "//": {
+          "metadata": {
+            "path": "id/compareTimeRolePolicyAttachment",
+            "uniqueId": "compareTimeRolePolicyAttachment"
+          }
+        },
+        "policy_arn": "${aws_iam_policy.compareTimePolicy.arn}",
+        "role": "${aws_iam_role.compareTimeRole.name}"
+      },
+      "compareTimeRolePolicyAttachment2": {
+        "//": {
+          "metadata": {
+            "path": "id/compareTimeRolePolicyAttachment2",
+            "uniqueId": "compareTimeRolePolicyAttachment2"
+          }
+        },
+        "policy_arn": "${data.aws_iam_policy.lambdaVpcPolicy.arn}",
+        "role": "${aws_iam_role.compareTimeRole.name}"
+      },
+      "compareTimeRolePolicyAttachment3": {
+        "//": {
+          "metadata": {
+            "path": "id/compareTimeRolePolicyAttachment3",
+            "uniqueId": "compareTimeRolePolicyAttachment3"
+          }
+        },
+        "policy_arn": "${data.aws_iam_policy.lambdaXrayPolicy.arn}",
+        "role": "${aws_iam_role.compareTimeRole.name}"
+      },
+      "eventTargetRolePolicyAttachment": {
+        "//": {
+          "metadata": {
+            "path": "id/eventTargetRolePolicyAttachment",
+            "uniqueId": "eventTargetRolePolicyAttachment"
+          }
+        },
+        "policy_arn": "${aws_iam_policy.eventTargetPolicy.arn}",
+        "role": "${aws_iam_role.eventTargetRole.name}"
+      },
+      "flowsRolePolicyAttachment": {
+        "//": {
+          "metadata": {
+            "path": "id/flowsRolePolicyAttachment",
+            "uniqueId": "flowsRolePolicyAttachment"
+          }
+        },
+        "policy_arn": "${aws_iam_policy.flowsPolicy.arn}",
+        "role": "${aws_iam_role.flowsRole.name}"
+      },
+      "initRolePolicyAttachment": {
+        "//": {
+          "metadata": {
+            "path": "id/initRolePolicyAttachment",
+            "uniqueId": "initRolePolicyAttachment"
+          }
+        },
+        "policy_arn": "${aws_iam_policy.initPolicy.arn}",
+        "role": "${aws_iam_role.initRole.name}"
+      },
+      "initRolePolicyAttachment2": {
+        "//": {
+          "metadata": {
+            "path": "id/initRolePolicyAttachment2",
+            "uniqueId": "initRolePolicyAttachment2"
+          }
+        },
+        "policy_arn": "${data.aws_iam_policy.lambdaVpcPolicy.arn}",
+        "role": "${aws_iam_role.initRole.name}"
+      },
+      "initRolePolicyAttachment3": {
+        "//": {
+          "metadata": {
+            "path": "id/initRolePolicyAttachment3",
+            "uniqueId": "initRolePolicyAttachment3"
+          }
+        },
+        "policy_arn": "${data.aws_iam_policy.lambdaXrayPolicy.arn}",
+        "role": "${aws_iam_role.initRole.name}"
+      },
+      "schedulerRolePolicyAttachment": {
+        "//": {
+          "metadata": {
+            "path": "id/schedulerRolePolicyAttachment",
+            "uniqueId": "schedulerRolePolicyAttachment"
+          }
+        },
+        "policy_arn": "${aws_iam_policy.schedulerPolicy.arn}",
+        "role": "${aws_iam_role.schedulerRole.name}"
+      },
+      "sfn1RolePolicyAttachment": {
+        "//": {
+          "metadata": {
+            "path": "id/sfn1RolePolicyAttachment",
+            "uniqueId": "sfn1RolePolicyAttachment"
+          }
+        },
+        "policy_arn": "${aws_iam_policy.sfn1Policy.arn}",
+        "role": "${aws_iam_role.sfn1Role.name}"
+      },
+      "sfn1RolePolicyAttachment2": {
+        "//": {
+          "metadata": {
+            "path": "id/sfn1RolePolicyAttachment2",
+            "uniqueId": "sfn1RolePolicyAttachment2"
+          }
+        },
+        "policy_arn": "${data.aws_iam_policy.lambdaXrayPolicy.arn}",
+        "role": "${aws_iam_role.sfn1Role.name}"
+      },
+      "sfn2RolePolicyAttachment": {
+        "//": {
+          "metadata": {
+            "path": "id/sfn2RolePolicyAttachment",
+            "uniqueId": "sfn2RolePolicyAttachment"
+          }
+        },
+        "policy_arn": "${aws_iam_policy.sfn2Policy.arn}",
+        "role": "${aws_iam_role.sfn2Role.name}"
+      },
+      "sfn2RolePolicyAttachment2": {
+        "//": {
+          "metadata": {
+            "path": "id/sfn2RolePolicyAttachment2",
+            "uniqueId": "sfn2RolePolicyAttachment2"
+          }
+        },
+        "policy_arn": "${data.aws_iam_policy.lambdaXrayPolicy.arn}",
+        "role": "${aws_iam_role.sfn2Role.name}"
+      }
+    },
+    "aws_kms_alias": {
+      "cmkAlias": {
+        "//": {
+          "metadata": {
+            "path": "id/cmkAlias",
+            "uniqueId": "cmkAlias"
+          }
+        },
+        "name": "alias/${var.ProjectName}",
+        "target_key_id": "${aws_kms_key.cmk.arn}"
+      }
+    },
+    "aws_kms_key": {
+      "cmk": {
+        "//": {
+          "metadata": {
+            "path": "id/cmk",
+            "uniqueId": "cmk"
+          }
+        },
+        "customer_master_key_spec": "SYMMETRIC_DEFAULT",
+        "deletion_window_in_days": 7,
+        "enable_key_rotation": true,
+        "policy": "\n{\n    \"Version\": \"2012-10-17\",\n    \"Id\": \"${var.ProjectName}\",\n    \"Statement\": [\n        {\n            \"Sid\": \"Enable IAM User Permissions\",\n            \"Effect\": \"Allow\",\n            \"Principal\": {\n                \"AWS\": \"arn:aws:iam::${data.aws_caller_identity.callerIdentity.account_id}:root\"\n            },\n            \"Action\": \"kms:*\",\n            \"Resource\": \"*\"\n        },\n        {\n            \"Sid\": \"Allow current role or IAM user\",\n            \"Effect\": \"Allow\",\n            \"Principal\": {\n                \"AWS\": \"${data.aws_iam_session_context.iamSessionContext.arn}\"\n            },\n            \"Action\": \"kms:*\",\n            \"Resource\": \"*\"\n        },\n        {\n            \"Sid\": \"Allow X-ray\",\n            \"Effect\": \"Allow\",\n            \"Principal\": {\n                \"Service\": \"xray.amazonaws.com\"\n            },\n            \"Action\": [\n                \"kms:Encrypt*\",\n                \"kms:Decrypt*\",\n                \"kms:ReEncrypt*\",\n                \"kms:GenerateDataKey*\",\n                \"kms:DescribeKey*\"\n            ],\n            \"Resource\": [\n                \"*\"\n            ]\n        },\n        {\n            \"Sid\": \"Allow CloudWatch\",\n            \"Effect\": \"Allow\",\n            \"Principal\": {\n                \"Service\": \"logs.amazonaws.com\"\n            },\n            \"Action\": [\n                \"kms:Encrypt*\",\n                \"kms:Decrypt*\",\n                \"kms:ReEncrypt*\",\n                \"kms:GenerateDataKey*\",\n                \"kms:DescribeKey*\"\n            ],\n            \"Resource\": \"*\",\n            \"Condition\": {\n                \"ArnEquals\": {\n                    \"kms:EncryptionContext:aws:logs:arn\": [\n                        \"arn:aws:logs:${data.aws_region.currentRegion.name}:${data.aws_caller_identity.callerIdentity.account_id}:log-group:/aws/lambda/compareTime\",\n                        \"arn:aws:logs:${data.aws_region.currentRegion.name}:${data.aws_caller_identity.callerIdentity.account_id}:log-group:/aws/lambda/init\",\n                        \"arn:aws:logs:${data.aws_region.currentRegion.name}:${data.aws_caller_identity.callerIdentity.account_id}:log-group:/aws/sfn/sfn1\",\n                        \"arn:aws:logs:${data.aws_region.currentRegion.name}:${data.aws_caller_identity.callerIdentity.account_id}:log-group:/aws/sfn/sfn2\",\n                        \"arn:aws:logs:${data.aws_region.currentRegion.name}:${data.aws_caller_identity.callerIdentity.account_id}:log-group:/aws/vpc/flows\"\n                    ]\n                }\n            }\n        },\n        {\n            \"Sid\": \"Allow SNS topic and SNS publisher\",\n            \"Effect\": \"Allow\",\n            \"Principal\": {\n                \"Service\": \"sns.amazonaws.com\",\n                \"AWS\": [\n                    \"arn:aws:iam::${data.aws_caller_identity.callerIdentity.account_id}:role/${var.ProjectName}/sfn1\",\n                    \"arn:aws:iam::${data.aws_caller_identity.callerIdentity.account_id}:role/${var.ProjectName}/sfn2\",\n                    \"arn:aws:iam::${data.aws_caller_identity.callerIdentity.account_id}:role/${var.ProjectName}/init\",\n                    \"arn:aws:iam::${data.aws_caller_identity.callerIdentity.account_id}:role/${var.ProjectName}/compareTime\"\n                ]\n            },\n            \"Action\": [\n                \"kms:Encrypt*\",\n                \"kms:Decrypt*\",\n                \"kms:ReEncrypt*\",\n                \"kms:GenerateDataKey*\",\n                \"kms:DescribeKey*\"\n            ],\n            \"Resource\": \"*\",\n            \"Condition\": {\n                \"ArnEquals\": {\n                    \"kms:EncryptionContext:aws:sns:topicArn\": [\n                        \"arn:aws:sns:${data.aws_region.currentRegion.name}:${data.aws_caller_identity.callerIdentity.account_id}:${tobool(lower(var.FifoTopic)) ? format(\"%s%s\", var.ProjectName, \".fifo\") : format(\"%s\", var.ProjectName)}\",\n                        \"arn:aws:sns:${data.aws_region.currentRegion.name}:${data.aws_caller_identity.callerIdentity.account_id}:${tobool(lower(var.FifoTopic)) ? format(\"%s%s\", var.ProjectName, \"Dlq.fifo\") : format(\"%s%s\", var.ProjectName, \"Dlq\")}\"\n                    ]\n                }\n            }\n        },\n        {\n            \"Effect\": \"Allow\",  \n            \"Principal\": {\n                \"AWS\": \"arn:aws:iam::${data.aws_caller_identity.callerIdentity.account_id}:role/${var.ProjectName}/sfn2\"\n            },\n            \"Action\":  [\n                \"kms:Encrypt\",\n                \"kms:Decrypt\",\n                \"kms:ReEncrypt*\",\n                \"kms:GenerateDataKey*\",\n                \"kms:DescribeKey\",\n                \"kms:CreateGrant\",\n                \"kms:Describe*\",\n                \"kms:Get*\",\n                \"kms:List*\",\n                \"kms:RevokeGrant\"\n            ],\n            \"Resource\": [\n                \"*\"\n            ],\n            \"Condition\": { \n                \"StringLike\": {\n                    \"kms:ViaService\" : \"dynamodb.*.amazonaws.com\"\n                },\n                \"StringEquals\": {\n                    \"kms:EncryptionContext:aws:dynamodb:tableName\": [\n                        \"${var.ProjectName}\"\n                    ],\n                    \"kms:EncryptionContext:aws:dynamodb:subscriberId\": [\n                        \"${data.aws_caller_identity.callerIdentity.account_id}\"\n                    ]\n                }\n            }\n        }\n    ]\n}\n"
+      }
+    },
+    "aws_lambda_function": {
+      "compareTime": {
+        "//": {
+          "metadata": {
+            "path": "id/compareTime",
+            "uniqueId": "compareTime"
+          }
+        },
+        "dead_letter_config": {
+          "target_arn": "${aws_sns_topic.snsDlqTopic.arn}"
+        },
+        "depends_on": [
+          "aws_cloudwatch_log_group.logGroupCompareTime"
+        ],
+        "filename": "${data.archive_file.compareTimeArchive.output_path}",
+        "function_name": "compareTime",
+        "handler": "index.handler",
+        "publish": true,
+        "reserved_concurrent_executions": 100,
+        "role": "${aws_iam_role.compareTimeRole.arn}",
+        "runtime": "nodejs20.x",
+        "source_code_hash": "${data.archive_file.compareTimeArchive.output_base64sha256}",
+        "tracing_config": {
+          "mode": "Active"
+        },
+        "vpc_config": {
+          "ipv6_allowed_for_dual_stack": true,
+          "security_group_ids": [
+            "${aws_security_group.lambdaSecurityGroup.id}"
+          ],
+          "subnet_ids": [
+            "${aws_subnet.lambdaSubnet1.id}",
+            "${aws_subnet.lambdaSubnet2.id}"
+          ]
+        }
+      },
+      "init": {
+        "//": {
+          "metadata": {
+            "path": "id/init",
+            "uniqueId": "init"
+          }
+        },
+        "dead_letter_config": {
+          "target_arn": "${aws_sns_topic.snsDlqTopic.arn}"
+        },
+        "depends_on": [
+          "aws_cloudwatch_log_group.logGroupInit"
+        ],
+        "filename": "${data.archive_file.initArchive.output_path}",
+        "function_name": "init",
+        "handler": "index.handler",
+        "publish": true,
+        "reserved_concurrent_executions": 100,
+        "role": "${aws_iam_role.initRole.arn}",
+        "runtime": "nodejs20.x",
+        "source_code_hash": "${data.archive_file.initArchive.output_base64sha256}",
+        "tracing_config": {
+          "mode": "Active"
+        },
+        "vpc_config": {
+          "ipv6_allowed_for_dual_stack": true,
+          "security_group_ids": [
+            "${aws_security_group.lambdaSecurityGroup.id}"
+          ],
+          "subnet_ids": [
+            "${aws_subnet.lambdaSubnet1.id}",
+            "${aws_subnet.lambdaSubnet2.id}"
+          ]
+        }
+      }
+    },
+    "aws_scheduler_schedule_group": {
+      "scheduleGroup": {
+        "//": {
+          "metadata": {
+            "path": "id/scheduleGroup",
+            "uniqueId": "scheduleGroup"
+          }
+        },
+        "name": "${var.ProjectName}"
+      }
+    },
+    "aws_security_group": {
+      "lambdaSecurityGroup": {
+        "//": {
+          "metadata": {
+            "path": "id/lambdaSecurityGroup",
+            "uniqueId": "lambdaSecurityGroup"
+          }
+        },
+        "description": "Block all traffic",
+        "egress": [
+          {
+            "cidr_blocks": [
+              "0.0.0.0/0"
+            ],
+            "description": "Block all egress traffic",
+            "from_port": 0,
+            "ipv6_cidr_blocks": null,
+            "prefix_list_ids": null,
+            "protocol": "-1",
+            "security_groups": null,
+            "self": true,
+            "to_port": 0
+          }
+        ],
+        "ingress": [
+          {
+            "cidr_blocks": [
+              "0.0.0.0/0"
+            ],
+            "description": "Block all ingress traffic",
+            "from_port": 0,
+            "ipv6_cidr_blocks": null,
+            "prefix_list_ids": null,
+            "protocol": "-1",
+            "security_groups": null,
+            "self": null,
+            "to_port": 0
+          }
+        ],
+        "vpc_id": "${aws_vpc.lambdaVpc.id}"
+      }
+    },
+    "aws_sfn_state_machine": {
+      "sfn1": {
+        "//": {
+          "metadata": {
+            "path": "id/sfn1",
+            "uniqueId": "sfn1"
+          }
+        },
+        "definition": "${templatefile(\"assets/sfn1Asset/3F090A576A414C1B0BF16A3E66642035/sfn1.json\", {\"compareTimeArn\" = aws_lambda_function.compareTime.qualified_arn})}",
+        "depends_on": [
+          "aws_cloudwatch_log_group.logGroupSfn1"
+        ],
+        "lifecycle": {
+          "replace_triggered_by": [
+            "aws_lambda_function.compareTime"
+          ]
+        },
+        "logging_configuration": {
+          "include_execution_data": true,
+          "level": "ERROR",
+          "log_destination": "${aws_cloudwatch_log_group.logGroupSfn1.arn}:*"
+        },
+        "name": "sfn1",
+        "publish": true,
+        "role_arn": "${aws_iam_role.sfn1Role.arn}",
+        "tracing_configuration": {
+          "enabled": true
+        }
+      },
+      "sfn2": {
+        "//": {
+          "metadata": {
+            "path": "id/sfn2",
+            "uniqueId": "sfn2"
+          }
+        },
+        "definition": "${templatefile(\"assets/sfn2Asset/9CE7A79B8ACE172F8D1F13F0A75E106D/sfn2.json\", {\"Threshold\" = var.Threshold, \"MonitorStepFunctionArn\" = aws_sfn_state_machine.sfn1.state_machine_version_arn, \"MonitorStepFunctionRoleArn\" = aws_iam_role.schedulerRole.arn, \"FifoTopic\" = var.FifoTopic, \"LambdaFunctionArn\" = aws_lambda_function.init.qualified_arn, \"Monitor\" = var.Monitor, \"SnsTopicArn\" = aws_sns_topic.snsTopic.arn, \"MonitorGroup\" = var.MonitorGroup, \"ProjectName\" = var.ProjectName})}",
+        "depends_on": [
+          "aws_cloudwatch_log_group.logGroupSfn2"
+        ],
+        "lifecycle": {
+          "replace_triggered_by": [
+            "aws_sfn_state_machine.sfn1",
+            "aws_lambda_function.init",
+            "aws_sns_topic.snsTopic"
+          ]
+        },
+        "logging_configuration": {
+          "include_execution_data": true,
+          "level": "ERROR",
+          "log_destination": "${aws_cloudwatch_log_group.logGroupSfn2.arn}:*"
+        },
+        "name": "sfn2",
+        "publish": true,
+        "role_arn": "${aws_iam_role.sfn2Role.arn}",
+        "tracing_configuration": {
+          "enabled": true
+        }
+      }
+    },
+    "aws_sns_topic": {
+      "snsDlqTopic": {
+        "//": {
+          "metadata": {
+            "path": "id/snsDlqTopic",
+            "uniqueId": "snsDlqTopic"
+          }
+        },
+        "fifo_topic": "${tobool(lower(var.FifoTopic))}",
+        "kms_master_key_id": "${aws_kms_alias.cmkAlias.arn}",
+        "name": "${tobool(lower(var.FifoTopic)) ? format(\"%s%s\", var.ProjectName, \"Dlq.fifo\") : format(\"%s%s\", var.ProjectName, \"Dlq\")}"
+      },
+      "snsTopic": {
+        "//": {
+          "metadata": {
+            "path": "id/snsTopic",
+            "uniqueId": "snsTopic"
+          }
+        },
+        "fifo_topic": "${tobool(lower(var.FifoTopic))}",
+        "kms_master_key_id": "${aws_kms_alias.cmkAlias.arn}",
+        "name": "${tobool(lower(var.FifoTopic)) ? format(\"%s%s\", var.ProjectName, \".fifo\") : format(\"%s\", var.ProjectName)}"
+      }
+    },
+    "aws_subnet": {
+      "lambdaSubnet1": {
+        "//": {
+          "metadata": {
+            "path": "id/lambdaSubnet1",
+            "uniqueId": "lambdaSubnet1"
+          }
+        },
+        "assign_ipv6_address_on_creation": true,
+        "availability_zone": "${element(data.aws_availability_zones.az.names, 0)}",
+        "cidr_block": "10.0.0.0/17",
+        "ipv6_cidr_block": "${cidrsubnet(aws_vpc.lambdaVpc.ipv6_cidr_block, 4, 0)}",
+        "vpc_id": "${aws_vpc.lambdaVpc.id}"
+      },
+      "lambdaSubnet2": {
+        "//": {
+          "metadata": {
+            "path": "id/lambdaSubnet2",
+            "uniqueId": "lambdaSubnet2"
+          }
+        },
+        "assign_ipv6_address_on_creation": true,
+        "availability_zone": "${element(data.aws_availability_zones.az.names, 1)}",
+        "cidr_block": "10.0.128.0/17",
+        "ipv6_cidr_block": "${cidrsubnet(aws_vpc.lambdaVpc.ipv6_cidr_block, 4, 1)}",
+        "vpc_id": "${aws_vpc.lambdaVpc.id}"
+      }
+    },
+    "aws_vpc": {
+      "lambdaVpc": {
+        "//": {
+          "metadata": {
+            "path": "id/lambdaVpc",
+            "uniqueId": "lambdaVpc"
+          }
+        },
+        "assign_generated_ipv6_cidr_block": true,
+        "cidr_block": "10.0.0.0/16"
+      }
+    },
+    "aws_xray_encryption_config": {
+      "xrayEncryptionConfig": {
+        "//": {
+          "metadata": {
+            "path": "id/xrayEncryptionConfig",
+            "uniqueId": "xrayEncryptionConfig"
+          }
+        },
+        "key_id": "${aws_kms_alias.cmkAlias.arn}",
+        "type": "KMS"
+      }
+    }
+  },
+  "terraform": {
+    "required_providers": {
+      "archive": {
+        "version": ">= 2.4.1"
+      },
+      "aws": {
+        "version": ">= 5.31.0"
+      }
+    }
+  },
+  "variable": {
+    "FifoTopic": {
+      "default": "false",
+      "type": "string",
+      "validation": [
+        {
+          "condition": "${can(regex(\"^(True)|(true)|(False)|(false)$\", var.FifoTopic))}",
+          "error_message": "Error. Wrong FifoTopic TF variable"
+        }
+      ]
+    },
+    "Monitor": {
+      "default": "false",
+      "type": "string",
+      "validation": [
+        {
+          "condition": "${can(regex(\"^(True)|(true)|(False)|(false)$\", var.Monitor))}",
+          "error_message": "Error. Wrong Monitor TF variable"
+        }
+      ]
+    },
+    "MonitorGroup": {
+      "default": "all",
+      "type": "string",
+      "validation": [
+        {
+          "condition": "${can(regex(\"^[a-z0-9]+$\", var.MonitorGroup))}",
+          "error_message": "Error. Wrong MonitorGroup TF variable"
+        }
+      ]
+    },
+    "ProjectName": {
+      "default": "ec2RuntimeMonitor",
+      "type": "string",
+      "validation": [
+        {
+          "condition": "${can(regex(\"^.*$\", var.ProjectName))}",
+          "error_message": "Error. Wrong ProjectName TF variable"
+        }
+      ]
+    },
+    "Threshold": {
+      "default": "24",
+      "type": "string",
+      "validation": [
+        {
+          "condition": "${can(regex(\"^[0-9]+$\", var.Threshold))}",
+          "error_message": "Error. Wrong Threshold TF variable"
+        }
+      ]
+    }
+  }
+}
